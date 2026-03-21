@@ -438,7 +438,6 @@
     </div>
 
     <main class="stage">
-        <!-- Timer Header -->
         <header class="timer-header">
             <div class="timer-composite">
                 <input type="text" id="minInput" class="timer-input" maxlength="3" value="25" autocomplete="off">
@@ -450,12 +449,9 @@
             </div>
         </header>
 
-        <!-- The Trinity List -->
         <div class="ritual-list" id="ritualList">
-            <!-- Items injected by JS -->
-        </div>
+            </div>
 
-        <!-- Minimal Controls -->
         <footer class="controls">
             <button class="control-btn" id="toggleFocus">Begin Ritual</button>
             <button class="control-btn" id="resetRitual">Reset</button>
@@ -767,6 +763,7 @@
 
         function finish() {
             pause();
+            playRitualBell(); // Plays the synthesized notification sound
             ui.toggleBtn.innerText = "Session Complete";
             showMessage("Rest your mind.");
             updateFavicon('idle');
@@ -802,7 +799,42 @@
             }
         }
 
-        // --- UTILS ---
+        // --- AUDIO / UTILS ---
+        
+        // Synthesizes a gentle, meditative bell sound using the Web Audio API
+        function playRitualBell() {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            
+            const ctx = new AudioContext();
+
+            // Main tone
+            const osc1 = ctx.createOscillator();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(432, ctx.currentTime); // 432Hz calming tone
+
+            // Harmonic tone
+            const osc2 = ctx.createOscillator();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(864, ctx.currentTime); 
+
+            // Gain node controls the volume envelope (fade in/out)
+            const gainNode = ctx.createGain();
+            gainNode.gain.setValueAtTime(0, ctx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.02); // Quick attack
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3); // Slow, trailing decay
+
+            osc1.connect(gainNode);
+            osc2.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            osc1.start(ctx.currentTime);
+            osc2.start(ctx.currentTime);
+            
+            osc1.stop(ctx.currentTime + 3);
+            osc2.stop(ctx.currentTime + 3);
+        }
+
         function showMessage(text) {
             ui.message.textContent = text;
             ui.message.classList.add('visible');
